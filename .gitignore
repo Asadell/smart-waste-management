@@ -1,0 +1,41 @@
+# Root ignore rules for the monorepo.
+# Each app keeps its own detailed .gitignore (backend/, web/, mobile/, ml/).
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.log
+
+# --- Secrets and local env (only *.example files are committed) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.jks
+*.keystore
+key.properties
+
+# --- Build outputs / release artifacts (APK goes to GitHub Releases, not the repo) ---
+*.apk
+*.aab
+coverage/
+
+# --- Python caches ---
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# --- ML: large / reproducible data (see ml/dataset/README.md to re-download) ---
+ml/data/raw/
+ml/data/processed/
+ml/models/checkpoint_*.keras
+
+# --- Web: design reference screenshots, not used by the app (assets live in web/public) ---
+web/src/**/*.png
+
+# --- AI-assistant instruction files shipped by the Laravel skeleton ---
+backend/AGENTS.md
+backend/CLAUDE.md

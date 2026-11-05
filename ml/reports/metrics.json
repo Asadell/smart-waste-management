@@ -1,0 +1,53 @@
+{
+  "model": "MobileNetV2 transfer learning",
+  "input_size": [
+    224,
+    224
+  ],
+  "classes": [
+    "organic",
+    "paper",
+    "plastic"
+  ],
+  "test_accuracy": 0.9704,
+  "test_samples": 270,
+  "per_class": {
+    "organic": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 90.0
+    },
+    "paper": {
+      "precision": 0.9659,
+      "recall": 0.9444,
+      "f1-score": 0.9551,
+      "support": 90.0
+    },
+    "plastic": {
+      "precision": 0.9457,
+      "recall": 0.9667,
+      "f1-score": 0.956,
+      "support": 90.0
+    }
+  },
+  "macro_f1": 0.9704,
+  "confusion_matrix": [
+    [
+      90,
+      0,
+      0
+    ],
+    [
+      0,
+      85,
+      5
+    ],
+    [
+      0,
+      3,
+      87
+    ]
+  ],
+  "epochs_trained": 19
+}

@@ -1,0 +1,9 @@
+# Training / evaluation (notebook). Python 3.10-3.12.
+-r requirements.txt
+tensorflow[and-cuda]==2.19.*
+scikit-learn
+matplotlib
+seaborn
+jupyter
+pytest
+httpx

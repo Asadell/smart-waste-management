@@ -1,0 +1,57 @@
+# Local development stack.
+#   docker compose up -d            -> postgres + backend (+ ml when model is ready)
+#   docker compose exec backend php artisan db:seed
+#   docker compose exec backend php artisan test
+name: swm
+
+x-db-env: &db-env
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_DATABASE: swm
+  DB_USERNAME: swm
+  DB_PASSWORD: secret
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: swm
+      POSTGRES_USER: swm
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/01-test-db.sql:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swm -d swm"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    environment:
+      <<: *db-env
+      APP_URL: http://localhost:8088
+      APP_FAKER_LOCALE: id_ID
+      ML_URL: http://ml:8000
+      SERVER_NAME: ":80"
+    ports:
+      - "8088:80"
+    volumes:
+      - ./backend:/app:z
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ml:
+    build: ./ml
+    ports:
+      - "127.0.0.1:8000:8000"
+    profiles: ["ml"]
+
+volumes:
+  pgdata:

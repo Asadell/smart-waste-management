@@ -1,0 +1,1377 @@
+openapi: 3.0.3
+info:
+  title: 'Smart Waste Management API'
+  description: 'REST API untuk aplikasi web (admin & user) dan mobile Smart Waste Management.'
+  version: 1.0.0
+servers:
+  -
+    url: 'http://localhost:8088'
+tags:
+  -
+    name: AI
+    description: ''
+  -
+    name: Auth
+    description: ''
+  -
+    name: Dashboard
+    description: ''
+  -
+    name: Reports
+    description: "\nUser hanya melihat dan mengelola laporan miliknya. Admin melihat semua laporan."
+  -
+    name: 'Users (admin)'
+    description: ''
+components:
+  securitySchemes:
+    default:
+      type: http
+      scheme: bearer
+      description: 'Dapatkan token dari endpoint <b>POST /api/v1/auth/login</b> atau <b>/auth/register</b>, lalu kirim sebagai header <code>Authorization: Bearer {TOKEN}</code>.'
+security:
+  -
+    default: []
+paths:
+  /api/v1/predict:
+    post:
+      summary: 'Prediksi kategori sampah'
+      operationId: prediksiKategoriSampah
+      description: "Proxy ke layanan ML. Dipakai untuk preview sebelum laporan dikirim.\nBila `uncertain = true`, client sebaiknya meminta user memilih kategori."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    label: plastic
+                    confidence: 0.94
+                    uncertain: false
+                    probabilities:
+                      organic: 0.02
+                      paper: 0.04
+                      plastic: 0.94
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      label:
+                        type: string
+                        example: plastic
+                      confidence:
+                        type: number
+                        example: 0.94
+                      uncertain:
+                        type: boolean
+                        example: false
+                      probabilities:
+                        type: object
+                        properties:
+                          organic:
+                            type: number
+                            example: 0.02
+                          paper:
+                            type: number
+                            example: 0.04
+                          plastic:
+                            type: number
+                            example: 0.94
+        503:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Layanan AI sedang tidak tersedia.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Layanan AI sedang tidak tersedia.'
+      tags:
+        - AI
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 'Foto sampah yang akan diklasifikasi. Must be an image. Must not be greater than 10240 kilobytes.'
+              required:
+                - file
+  /api/v1/auth/register:
+    post:
+      summary: Register
+      operationId: register
+      description: 'Membuat akun baru (selalu role `user`) dan langsung mengembalikan token.'
+      parameters: []
+      responses:
+        422:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'The password field confirmation does not match.'
+                  errors:
+                    password:
+                      - 'The password field confirmation does not match.'
+                properties:
+                  message:
+                    type: string
+                    example: 'The password field confirmation does not match.'
+                  errors:
+                    type: object
+                    properties:
+                      password:
+                        type: array
+                        example:
+                          - 'The password field confirmation does not match.'
+                        items:
+                          type: string
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  example: 'Budi Santoso'
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 150 characters.'
+                  example: budi@example.com
+                phone:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
+                  example: '081234567890'
+                  nullable: true
+                password:
+                  type: string
+                  description: ''
+                  example: password123
+                device_name:
+                  type: string
+                  description: 'Nama token (opsional). Must not be greater than 100 characters.'
+                  example: 'Pixel 7'
+                  nullable: true
+              required:
+                - name
+                - email
+                - password
+      security: []
+  /api/v1/auth/login:
+    post:
+      summary: Login
+      operationId: login
+      description: "Mengembalikan token Sanctum. Kirim `client=mobile` dari aplikasi mobile:\nakun admin akan ditolak dengan 403."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    token: 4|ECn8vgYnIcfna27mm0jcm3OBfSUDBieUYAMLOPjBab4d613f
+                    token_type: Bearer
+                    user:
+                      id: 2
+                      name: 'Budi Santoso'
+                      email: user@swm.test
+                      role: user
+                      phone: '085198118418'
+                      avatar_url: null
+                      is_active: true
+                      created_at: '2026-11-04T16:10:42+00:00'
+                  message: 'Login berhasil.'
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: 4|ECn8vgYnIcfna27mm0jcm3OBfSUDBieUYAMLOPjBab4d613f
+                      token_type:
+                        type: string
+                        example: Bearer
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          name:
+                            type: string
+                            example: 'Budi Santoso'
+                          email:
+                            type: string
+                            example: user@swm.test
+                          role:
+                            type: string
+                            example: user
+                          phone:
+                            type: string
+                            example: '085198118418'
+                          avatar_url:
+                            type: string
+                            example: null
+                            nullable: true
+                          is_active:
+                            type: boolean
+                            example: true
+                          created_at:
+                            type: string
+                            example: '2026-11-04T16:10:42+00:00'
+                  message:
+                    type: string
+                    example: 'Login berhasil.'
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: user@swm.test
+                password:
+                  type: string
+                  description: ''
+                  example: password
+                client:
+                  type: string
+                  description: '`web` atau `mobile`. Admin ditolak (403) bila `mobile`.'
+                  example: web
+                  enum:
+                    - web
+                    - mobile
+                  nullable: true
+                device_name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  example: Chrome
+                  nullable: true
+              required:
+                - email
+                - password
+      security: []
+  /api/v1/auth/logout:
+    post:
+      summary: Logout
+      operationId: logout
+      description: 'Mencabut token yang sedang dipakai.'
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Auth
+  /api/v1/auth/me:
+    get:
+      summary: 'Profil saya'
+      operationId: profilSaya
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Auth
+  /api/v1/auth/profile:
+    put:
+      summary: 'Update profil'
+      operationId: updateProfil
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Auth
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  example: 'Budi Santoso'
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 150 characters.'
+                  example: budi@example.com
+                phone:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
+                  example: '081234567890'
+                  nullable: true
+                avatar:
+                  type: string
+                  format: binary
+                  description: 'Foto profil (opsional, multipart). Must be an image. Must not be greater than 5120 kilobytes.'
+                  nullable: true
+  /api/v1/auth/password:
+    put:
+      summary: 'Ganti password'
+      operationId: gantiPassword
+      description: 'Token lain milik user dicabut, token yang sedang dipakai tetap aktif.'
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_password:
+                  type: string
+                  description: ''
+                  example: password
+                password:
+                  type: string
+                  description: 'The value and <code>current_password</code> must be different.'
+                  example: newpassword123
+              required:
+                - current_password
+                - password
+  /api/v1/dashboard/stats:
+    get:
+      summary: Statistik
+      operationId: statistik
+      description: 'Admin mendapat statistik semua laporan, user mendapat statistik miliknya.'
+      parameters:
+        -
+          in: query
+          name: days
+          description: 'Rentang tren: 7 atau 30.'
+          example: 30
+          required: false
+          schema:
+            type: integer
+            description: 'Rentang tren: 7 atau 30.'
+            example: 30
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Dashboard
+  '/api/v1/reports/{report_id}/status':
+    patch:
+      summary: 'Update status (admin)'
+      operationId: updateStatusadmin
+      description: 'Setiap perubahan dicatat di riwayat status.'
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Reports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  example: in_progress
+                  enum:
+                    - pending
+                    - in_progress
+                    - completed
+                    - rejected
+                note:
+                  type: string
+                  description: 'Wajib bila status `rejected`. Must not be greater than 1000 characters.'
+                  example: 'Petugas menuju lokasi.'
+                  nullable: true
+              required:
+                - status
+    parameters:
+      -
+        in: path
+        name: report_id
+        description: 'The ID of the report.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/v1/reports:
+    get:
+      summary: 'Daftar laporan'
+      operationId: daftarLaporan
+      description: ''
+      parameters:
+        -
+          in: query
+          name: search
+          description: 'Cari di judul, deskripsi, alamat. Must not be greater than 100 characters.'
+          example: plastik
+          required: false
+          schema:
+            type: string
+            description: 'Cari di judul, deskripsi, alamat. Must not be greater than 100 characters.'
+            example: plastik
+            nullable: true
+        -
+          in: query
+          name: status
+          description: ''
+          example: pending
+          required: false
+          schema:
+            type: string
+            description: ''
+            example: pending
+            enum:
+              - pending
+              - in_progress
+              - completed
+              - rejected
+            nullable: true
+        -
+          in: query
+          name: category
+          description: ''
+          example: plastic
+          required: false
+          schema:
+            type: string
+            description: ''
+            example: plastic
+            enum:
+              - organic
+              - plastic
+              - paper
+            nullable: true
+        -
+          in: query
+          name: user_id
+          description: 'Khusus admin: filter per pelapor.'
+          example: null
+          required: false
+          schema:
+            type: integer
+            description: 'Khusus admin: filter per pelapor.'
+            example: null
+            nullable: true
+        -
+          in: query
+          name: date_from
+          description: 'Must be a valid date.'
+          example: '2026-11-01'
+          required: false
+          schema:
+            type: string
+            description: 'Must be a valid date.'
+            example: '2026-11-01'
+            nullable: true
+        -
+          in: query
+          name: date_to
+          description: 'Must be a valid date. Must be a date after or equal to <code>date_from</code>.'
+          example: '2026-11-30'
+          required: false
+          schema:
+            type: string
+            description: 'Must be a valid date. Must be a date after or equal to <code>date_from</code>.'
+            example: '2026-11-30'
+            nullable: true
+        -
+          in: query
+          name: sort
+          description: 'Kolom: created_at, updated_at, title, status, category. Awalan `-` untuk descending. Must not be greater than 30 characters.'
+          example: '-created_at'
+          required: false
+          schema:
+            type: string
+            description: 'Kolom: created_at, updated_at, title, status, category. Awalan `-` untuk descending. Must not be greater than 30 characters.'
+            example: '-created_at'
+            nullable: true
+        -
+          in: query
+          name: page
+          description: 'Must be at least 1.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Must be at least 1.'
+            example: 1
+            nullable: true
+        -
+          in: query
+          name: per_page
+          description: 'Must be at least 1. Must not be greater than 100.'
+          example: 10
+          required: false
+          schema:
+            type: integer
+            description: 'Must be at least 1. Must not be greater than 100.'
+            example: 10
+            nullable: true
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  data:
+                    -
+                      id: 36
+                      title: 'Tumpukan sampah organic di Ashly Villages'
+                      description: 'Fugiat sunt nihil accusantium harum mollitia modi deserunt aut ab provident perspiciatis quo omnis.'
+                      photo_url: 'http://localhost:8088/storage/reports/sample-organic.jpg'
+                      latitude: -7.348064
+                      longitude: 112.725149
+                      address: '532 Leuschke Causeway, Surabaya'
+                      category: organic
+                      ai_label: organic
+                      ai_confidence: 0.665
+                      ai_uncertain: false
+                      ai_match: true
+                      status: pending
+                      status_label: Pending
+                      admin_note: null
+                      user:
+                        id: 9
+                        name: 'Mina Bauch'
+                        email: okeefe.isidro@example.org
+                      can: null
+                      created_at: '2026-11-04T16:11:28+00:00'
+                      updated_at: '2026-11-04T16:11:28+00:00'
+                    -
+                      id: 37
+                      title: 'Tumpukan sampah organic di VonRueden Wells'
+                      description: 'Voluptatem laboriosam praesentium quis adipisci molestias fugit deleniti distinctio eum doloremque.'
+                      photo_url: 'http://localhost:8088/storage/reports/sample-organic.jpg'
+                      latitude: -7.264785
+                      longitude: 112.7153
+                      address: '10574 Schaden Brooks, Surabaya'
+                      category: organic
+                      ai_label: organic
+                      ai_confidence: 0.656
+                      ai_uncertain: false
+                      ai_match: true
+                      status: pending
+                      status_label: Pending
+                      admin_note: null
+                      user:
+                        id: 10
+                        name: 'Creola Torp DDS'
+                        email: ashtyn.oconnell@example.com
+                      can: null
+                      created_at: '2026-11-04T16:11:28+00:00'
+                      updated_at: '2026-11-04T16:11:28+00:00'
+                  links:
+                    first: '/?page=1'
+                    last: '/?page=1'
+                    prev: null
+                    next: null
+                  meta:
+                    current_page: 1
+                    from: 1
+                    last_page: 1
+                    links:
+                      -
+                        url: null
+                        label: '&laquo; Previous'
+                        page: null
+                        active: false
+                      -
+                        url: '/?page=1'
+                        label: '1'
+                        page: 1
+                        active: true
+                      -
+                        url: null
+                        label: 'Next &raquo;'
+                        page: null
+                        active: false
+                    path: /
+                    per_page: 10
+                    to: 2
+                    total: 2
+                properties:
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 36
+                        title: 'Tumpukan sampah organic di Ashly Villages'
+                        description: 'Fugiat sunt nihil accusantium harum mollitia modi deserunt aut ab provident perspiciatis quo omnis.'
+                        photo_url: 'http://localhost:8088/storage/reports/sample-organic.jpg'
+                        latitude: -7.348064
+                        longitude: 112.725149
+                        address: '532 Leuschke Causeway, Surabaya'
+                        category: organic
+                        ai_label: organic
+                        ai_confidence: 0.665
+                        ai_uncertain: false
+                        ai_match: true
+                        status: pending
+                        status_label: Pending
+                        admin_note: null
+                        user:
+                          id: 9
+                          name: 'Mina Bauch'
+                          email: okeefe.isidro@example.org
+                        can: null
+                        created_at: '2026-11-04T16:11:28+00:00'
+                        updated_at: '2026-11-04T16:11:28+00:00'
+                      -
+                        id: 37
+                        title: 'Tumpukan sampah organic di VonRueden Wells'
+                        description: 'Voluptatem laboriosam praesentium quis adipisci molestias fugit deleniti distinctio eum doloremque.'
+                        photo_url: 'http://localhost:8088/storage/reports/sample-organic.jpg'
+                        latitude: -7.264785
+                        longitude: 112.7153
+                        address: '10574 Schaden Brooks, Surabaya'
+                        category: organic
+                        ai_label: organic
+                        ai_confidence: 0.656
+                        ai_uncertain: false
+                        ai_match: true
+                        status: pending
+                        status_label: Pending
+                        admin_note: null
+                        user:
+                          id: 10
+                          name: 'Creola Torp DDS'
+                          email: ashtyn.oconnell@example.com
+                        can: null
+                        created_at: '2026-11-04T16:11:28+00:00'
+                        updated_at: '2026-11-04T16:11:28+00:00'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 36
+                        title:
+                          type: string
+                          example: 'Tumpukan sampah organic di Ashly Villages'
+                        description:
+                          type: string
+                          example: 'Fugiat sunt nihil accusantium harum mollitia modi deserunt aut ab provident perspiciatis quo omnis.'
+                        photo_url:
+                          type: string
+                          example: 'http://localhost:8088/storage/reports/sample-organic.jpg'
+                        latitude:
+                          type: number
+                          example: -7.348064
+                        longitude:
+                          type: number
+                          example: 112.725149
+                        address:
+                          type: string
+                          example: '532 Leuschke Causeway, Surabaya'
+                        category:
+                          type: string
+                          example: organic
+                        ai_label:
+                          type: string
+                          example: organic
+                        ai_confidence:
+                          type: number
+                          example: 0.665
+                        ai_uncertain:
+                          type: boolean
+                          example: false
+                        ai_match:
+                          type: boolean
+                          example: true
+                        status:
+                          type: string
+                          example: pending
+                        status_label:
+                          type: string
+                          example: Pending
+                        admin_note:
+                          type: string
+                          example: null
+                          nullable: true
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 9
+                            name:
+                              type: string
+                              example: 'Mina Bauch'
+                            email:
+                              type: string
+                              example: okeefe.isidro@example.org
+                        can:
+                          type: string
+                          example: null
+                          nullable: true
+                        created_at:
+                          type: string
+                          example: '2026-11-04T16:11:28+00:00'
+                        updated_at:
+                          type: string
+                          example: '2026-11-04T16:11:28+00:00'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                        example: '/?page=1'
+                      last:
+                        type: string
+                        example: '/?page=1'
+                      prev:
+                        type: string
+                        example: null
+                        nullable: true
+                      next:
+                        type: string
+                        example: null
+                        nullable: true
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      from:
+                        type: integer
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+                      links:
+                        type: array
+                        example:
+                          -
+                            url: null
+                            label: '&laquo; Previous'
+                            page: null
+                            active: false
+                          -
+                            url: '/?page=1'
+                            label: '1'
+                            page: 1
+                            active: true
+                          -
+                            url: null
+                            label: 'Next &raquo;'
+                            page: null
+                            active: false
+                        items:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                              example: null
+                              nullable: true
+                            label:
+                              type: string
+                              example: '&laquo; Previous'
+                            page:
+                              type: string
+                              example: null
+                              nullable: true
+                            active:
+                              type: boolean
+                              example: false
+                      path:
+                        type: string
+                        example: /
+                      per_page:
+                        type: integer
+                        example: 10
+                      to:
+                        type: integer
+                        example: 2
+                      total:
+                        type: integer
+                        example: 2
+      tags:
+        - Reports
+    post:
+      summary: 'Buat laporan'
+      operationId: buatLaporan
+      description: "Kalau `ai_label` kosong, backend memanggil layanan ML sendiri. Kalau ML\nsedang mati, laporan tetap tersimpan dengan `ai_label = null`."
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Reports
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: 'Foto sampah (jpg/png/webp, maks 10MB). Must be an image. Must not be greater than 10240 kilobytes.'
+                title:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                  example: 'Sampah plastik menumpuk di trotoar'
+                description:
+                  type: string
+                  description: 'Must not be greater than 2000 characters.'
+                  example: 'Sudah 3 hari tidak diangkut.'
+                  nullable: true
+                latitude:
+                  type: number
+                  description: 'Must be between -90 and 90.'
+                  example: -7.2756
+                longitude:
+                  type: number
+                  description: 'Must be between -180 and 180.'
+                  example: 112.7426
+                address:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'Jl. Raya ITS, Sukolilo, Surabaya'
+                  nullable: true
+                category:
+                  type: string
+                  description: 'Kategori final (hasil prefill AI, boleh diubah user).'
+                  example: plastic
+                  enum:
+                    - organic
+                    - plastic
+                    - paper
+                ai_label:
+                  type: string
+                  description: 'Tebakan AI dari /predict. Bila kosong backend memanggil ML sendiri.'
+                  example: plastic
+                  enum:
+                    - organic
+                    - plastic
+                    - paper
+                  nullable: true
+                ai_confidence:
+                  type: number
+                  description: 'Must be between 0 and 1.'
+                  example: 0.94
+                  nullable: true
+                ai_uncertain:
+                  type: boolean
+                  description: ''
+                  example: false
+                  nullable: true
+              required:
+                - photo
+                - title
+                - latitude
+                - longitude
+                - category
+  '/api/v1/reports/{id}':
+    get:
+      summary: 'Detail laporan'
+      operationId: detailLaporan
+      description: 'Termasuk riwayat perubahan status.'
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Reports
+    put:
+      summary: 'Update laporan'
+      operationId: updateLaporan
+      description: "Pemilik hanya bisa mengubah laporan yang masih `pending`. Kirim sebagai\n`POST` + `_method=PUT` bila menyertakan foto (multipart)."
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Reports
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: 'Must be an image. Must not be greater than 10240 kilobytes.'
+                title:
+                  type: string
+                  description: 'Must not be greater than 150 characters.'
+                  example: b
+                description:
+                  type: string
+                  description: 'Must not be greater than 2000 characters.'
+                  example: 'Et animi quos velit et fugiat.'
+                  nullable: true
+                latitude:
+                  type: number
+                  description: 'Must be between -90 and 90.'
+                  example: -89
+                longitude:
+                  type: number
+                  description: 'Must be between -180 and 180.'
+                  example: -179
+                address:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: j
+                  nullable: true
+                category:
+                  type: string
+                  description: ''
+                  example: plastic
+                  enum:
+                    - organic
+                    - plastic
+                    - paper
+    delete:
+      summary: 'Hapus laporan'
+      operationId: hapusLaporan
+      description: 'Soft delete. Pemilik hanya bisa menghapus laporan `pending`.'
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Reports
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the report.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/v1/users/{user_id}/toggle-active':
+    patch:
+      summary: 'Aktif / nonaktifkan user'
+      operationId: aktifNonaktifkanUser
+      description: 'Menonaktifkan user juga mencabut semua token miliknya.'
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - 'Users (admin)'
+    parameters:
+      -
+        in: path
+        name: user_id
+        description: 'The ID of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/v1/users/{user_id}/reset-password':
+    patch:
+      summary: 'Reset password user'
+      operationId: resetPasswordUser
+      description: 'Pengganti fitur lupa password (aplikasi tidak memakai email/SMTP).'
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - 'Users (admin)'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  description: 'Password baru, min 8 karakter.'
+                  example: newpassword123
+              required:
+                - password
+    parameters:
+      -
+        in: path
+        name: user_id
+        description: 'The ID of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/v1/users:
+    get:
+      summary: 'Daftar user'
+      operationId: daftarUser
+      description: ''
+      parameters:
+        -
+          in: query
+          name: search
+          description: 'Cari nama/email.'
+          example: budi
+          required: false
+          schema:
+            type: string
+            description: 'Cari nama/email.'
+            example: budi
+        -
+          in: query
+          name: role
+          description: '`admin` atau `user`.'
+          example: user
+          required: false
+          schema:
+            type: string
+            description: '`admin` atau `user`.'
+            example: user
+        -
+          in: query
+          name: is_active
+          description: 'Filter status aktif.'
+          example: true
+          required: false
+          schema:
+            type: boolean
+            description: 'Filter status aktif.'
+            example: true
+        -
+          in: query
+          name: per_page
+          description: ''
+          example: 10
+          required: false
+          schema:
+            type: integer
+            description: ''
+            example: 10
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - 'Users (admin)'
+    post:
+      summary: 'Tambah user'
+      operationId: tambahUser
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - 'Users (admin)'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  example: b
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 150 characters.'
+                  example: zbailey@example.net
+                phone:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
+                  example: i
+                  nullable: true
+                role:
+                  type: string
+                  description: ''
+                  example: admin
+                  enum:
+                    - admin
+                    - user
+                is_active:
+                  type: boolean
+                  description: ''
+                  example: false
+                password:
+                  type: string
+                  description: ''
+                  example: architecto
+              required:
+                - name
+                - email
+                - role
+                - password
+  '/api/v1/users/{id}':
+    get:
+      summary: 'Detail user'
+      operationId: detailUser
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - 'Users (admin)'
+    put:
+      summary: 'Update user'
+      operationId: updateUser
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - 'Users (admin)'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  example: b
+                email:
+                  type: string
+                  description: 'Must be a valid email address. Must not be greater than 150 characters.'
+                  example: zbailey@example.net
+                phone:
+                  type: string
+                  description: 'Must not be greater than 30 characters.'
+                  example: i
+                  nullable: true
+                role:
+                  type: string
+                  description: ''
+                  example: admin
+                  enum:
+                    - admin
+                    - user
+                is_active:
+                  type: boolean
+                  description: ''
+                  example: true
+    delete:
+      summary: 'Hapus user'
+      operationId: hapusUser
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - 'Users (admin)'
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer

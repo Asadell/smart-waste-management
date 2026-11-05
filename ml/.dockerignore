@@ -1,0 +1,7 @@
+.venv
+data
+notebooks
+reports
+tests
+__pycache__
+*.keras
