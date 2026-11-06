@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ImageOff, Inbox, Recycle } from "lucide-react";
+import { ImageOff, Inbox } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,9 +8,7 @@ import { cn } from "@/lib/utils";
 export function Logo({ className, light }: { className?: string; light?: boolean }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <div className={cn("grid size-9 place-items-center rounded-xl", light ? "bg-brand-foreground/15 text-brand-foreground" : "bg-primary text-primary-foreground")}>
-        <Recycle className="size-5" />
-      </div>
+      <img src="/logo.png" alt="Smart Waste Management" className={cn("size-9 shrink-0 rounded-xl", light && "ring-2 ring-brand-foreground/30")} />
       <div className="leading-tight">
         <div className={cn("text-lg font-extrabold tracking-tight", light && "text-brand-foreground")}>SWM</div>
         <div className={cn("text-[10px] font-medium uppercase tracking-wider", light ? "text-brand-foreground/70" : "text-muted-foreground")}>Smart Waste</div>

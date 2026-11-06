@@ -1,4 +1,4 @@
-package id.swm.swm_mobile
+package id.swm.smartwaste
 
 import io.flutter.embedding.android.FlutterActivity
 

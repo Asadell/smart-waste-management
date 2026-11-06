@@ -21,10 +21,11 @@ class AuthScaffold extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Icon(Icons.recycling, size: 40, color: theme.colorScheme.primary),
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset('assets/images/logo.png', width: 72, height: 72),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Text(title, textAlign: TextAlign.center, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),

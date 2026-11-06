@@ -37,7 +37,10 @@ class _SplashPageState extends State<SplashPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.recycling, size: 88, color: scheme.onPrimary),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Image.asset('assets/images/logo.png', width: 112, height: 112),
+            ),
             const SizedBox(height: 16),
             Text(
               'Smart Waste',

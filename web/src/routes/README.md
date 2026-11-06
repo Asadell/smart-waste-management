@@ -1,22 +1,21 @@
 # Routes
 
-TanStack Router uses **file-based routing**. Every `.tsx` file in this directory
-defines a route. Do **not** create `src/pages/`, `src/routes/_app/index.tsx`, or
-`app/layout.tsx` - those are Next.js / Remix conventions. The only root layout
-is `src/routes/__root.tsx`.
+File-based routing (TanStack Router). Each file here is one route; `src/routeTree.gen.ts` is generated with
+`bun run routes` after adding or renaming a file.
 
-## Conventions
+| File | URL | Access |
+| --- | --- | --- |
+| `__root.tsx` | app shell (toaster, auth provider, document title) | - |
+| `index.tsx` | `/` → redirects to `/dashboard` or `/login` | - |
+| `login.tsx`, `register.tsx` | `/login`, `/register` | public |
+| `_authenticated.tsx` | layout that requires login (sidebar + header) | signed in |
+| `_authenticated.dashboard.tsx` | `/dashboard` | signed in |
+| `_authenticated.reports.index.tsx` | `/reports` (filters validated from the URL) | signed in |
+| `_authenticated.reports.new.tsx` | `/reports/new` | signed in |
+| `_authenticated.reports.$id.index.tsx` | `/reports/:id` | owner / admin |
+| `_authenticated.reports.$id.edit.tsx` | `/reports/:id/edit` | owner (pending) / admin |
+| `_authenticated.users.tsx` | `/users` | admin |
+| `_authenticated.map.tsx` | `/map` | admin |
+| `_authenticated.profile.tsx` | `/profile` | signed in |
 
-| File | URL |
-| --- | --- |
-| `index.tsx` | `/` |
-| `about.tsx` | `/about` |
-| `users/index.tsx` | `/users` |
-| `users/$id.tsx` | `/users/:id` (dynamic - bare `$`, no curly braces) |
-| `posts/{-$category}.tsx` | `/posts/:category?` (optional segment) |
-| `files/$.tsx` | `/files/*` (splat - read via `_splat` param, never `*`) |
-| `_layout.tsx` | layout route (renders children via `<Outlet />`) |
-| `__root.tsx` | app shell - wraps every page; preserve `<Outlet />` |
-
-`src/routeTree.gen.ts` is generated. After adding/renaming a route file run
-`bun run routes` (TanStack Router CLI) and commit the result. Don't edit it by hand.
+Admin-only pages are wrapped in `AdminOnly` (`src/components/RoleRoute.tsx`); the API enforces the same rules.
