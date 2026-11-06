@@ -66,11 +66,12 @@ Status terbaru diambil dengan **pull-to-refresh** di Dashboard, Riwayat, dan Det
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs --force-jit   # generate app_router.gr.dart
 
-# Emulator Android → backend lokal (docker compose, port 8088)
+# Default: http://localhost:8000/api/v1 (backend lokal via `php artisan serve`)
+adb reverse tcp:8000 tcp:8000      # agar localhost di HP/emulator diteruskan ke komputer
 flutter run
 
-# Device fisik / server production
-flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8088/api/v1
+# Backend lain (Docker port 8088, IP LAN, atau server)
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8088/api/v1
 ```
 `--force-jit` diperlukan karena beberapa dependency memakai *build hooks* yang belum didukung mode AOT build_runner.
 

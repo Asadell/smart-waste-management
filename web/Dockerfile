@@ -1,5 +1,5 @@
 # --- build: static SPA ---
-FROM oven/bun:1.2 AS build
+FROM oven/bun:1 AS build
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
 RUN bun install --frozen-lockfile

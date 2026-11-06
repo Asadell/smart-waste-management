@@ -1,0 +1,100 @@
+# Staging / production stack: postgres + backend + ml + web.
+#
+#   cp .env.staging.example .env.staging   # fill in secrets
+#   docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build
+#   docker compose -f docker-compose.staging.yml --env-file .env.staging exec backend php artisan db:seed --force
+#
+# backend and web join the external `npm_proxy` network so Nginx Proxy Manager can reach them
+# by container name (swm-backend:80, swm-web:80). Postgres and the ML service stay internal.
+name: swm-staging
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: swm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [swm]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      retries: 20
+    mem_limit: 384m
+
+  ml:
+    build: ./ml
+    container_name: swm-ml
+    restart: unless-stopped
+    environment:
+      API_KEY: ${ML_API_KEY}
+      CONFIDENCE_THRESHOLD: "0.6"
+    networks: [swm]
+    mem_limit: 512m
+
+  backend:
+    build:
+      context: ./backend
+      target: prod
+    container_name: swm-backend
+    restart: unless-stopped
+    environment:
+      APP_NAME: "Smart Waste Management"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${BACKEND_URL}
+      APP_LOCALE: id
+      APP_FAKER_LOCALE: id_ID
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: warning
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: sync
+      FILESYSTEM_DISK: public
+      ML_URL: http://ml:8000
+      ML_API_KEY: ${ML_API_KEY}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      SERVER_NAME: ":80"
+    volumes:
+      - storage:/app/storage # uploaded photos survive rebuilds
+    ports:
+      - "127.0.0.1:8088:80" # local check only; public traffic goes through NPM
+    networks: [swm, npm_proxy]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml:
+        condition: service_started
+    mem_limit: 512m
+
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_API_URL: ${BACKEND_URL}/api/v1
+    container_name: swm-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8089:80" # local check only
+    networks: [npm_proxy]
+    mem_limit: 64m
+
+volumes:
+  pgdata:
+  storage:
+
+networks:
+  swm:
+  npm_proxy:
+    external: true

@@ -144,7 +144,7 @@ bun run dev                                           # http://localhost:5173
 cd mobile
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs --force-jit
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8088/api/v1   # emulator Android
+flutter run                                           # default http://localhost:8000/api/v1 (adb reverse tcp:8000 tcp:8000)
 flutter build apk --release --dart-define=API_BASE_URL=https://api.example.com/api/v1
 ```
 
@@ -157,8 +157,19 @@ flutter build apk --release --dart-define=API_BASE_URL=https://api.example.com/a
 | backend | `ML_URL`, `ML_API_KEY` | `http://ml:8000` |
 | backend | `CORS_ALLOWED_ORIGINS` | `https://swm.example.com` |
 | web | `VITE_API_URL` | `http://localhost:8088/api/v1` |
-| mobile | `--dart-define=API_BASE_URL` | `http://10.0.2.2:8088/api/v1` |
+| mobile | `--dart-define=API_BASE_URL` | default `http://localhost:8000/api/v1` |
 | ml | `CONFIDENCE_THRESHOLD`, `API_KEY` | `0.6` |
+
+### Deploy (server dengan Docker + Nginx Proxy Manager)
+```bash
+git clone https://github.com/Asadell/smart-waste-management.git && cd smart-waste-management
+cp .env.staging.example .env.staging        # isi APP_KEY, DB_PASSWORD, ML_API_KEY, URL
+docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build
+docker compose -f docker-compose.staging.yml --env-file .env.staging exec backend php artisan db:seed --force   # sekali saja
+```
+Stack: `swm-postgres`, `swm-ml` (keduanya internal), `swm-backend`, dan `swm-web`. Backend dan web bergabung ke network
+`npm_proxy`, jadi di Nginx Proxy Manager cukup arahkan domain ke `swm-backend:80` dan `swm-web:80`. Foto dan database
+tersimpan di Docker volume, sehingga aman saat rebuild. Update: `git pull` lalu ulangi perintah `up -d --build`.
 
 ---
 
