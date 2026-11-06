@@ -22,7 +22,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Smart Waste Management — ML API",
-    description="Klasifikasi gambar sampah: **organic**, **paper**, **plastic** (MobileNetV2, TFLite).",
+    description=(
+        "Klasifikasi gambar sampah: **organic**, **paper**, **plastic**, atau **other** "
+        "(bukan salah satu dari 3 jenis sampah itu, mis. gitar atau botol kaca). MobileNetV2, TFLite."
+    ),
     version=settings.model_version,
     lifespan=lifespan,
 )

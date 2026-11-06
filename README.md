@@ -46,14 +46,15 @@ mendeteksi jenis sampahnya (organik, plastik, kertas), lalu **admin** di dashboa
 - Riwayat dan detail status laporan dengan pull-to-refresh, timeline status
 
 **Machine learning** - `ml/`
-- Klasifikasi 3 kelas (organic, paper, plastic), MobileNetV2 transfer learning (TensorFlow/Keras)
-- Dataset 1.800 gambar (Kaggle), **akurasi test 97,04%**, confusion matrix, classification report
+- Klasifikasi 4 kelas (organic, paper, plastic, **other**), MobileNetV2 transfer learning (TensorFlow/Keras).
+  Foto yang bukan sampah (mis. gitar) dijawab *"tidak dikenali sebagai sampah"*, tidak dipaksa jadi kertas/plastik
+- Dataset 9.812 gambar dari 4 dataset Kaggle, **akurasi test 91,32%**, benda yang tidak pernah dilihat ditolak **87,7%**, confusion matrix, classification report
 - REST API prediksi dengan FastAPI (model TFLite, ringan untuk server)
 
 **Backend** - `backend/`
 - REST API Laravel + Sanctum, PostgreSQL, Policy per role, FormRequest validation, API Resource
 - Proxy ke layanan ML; laporan **tetap tersimpan walau layanan ML mati**
-- Seeder 30 laporan realistis dengan foto asli, dokumentasi Scribe, 32 feature test
+- Seeder 30 laporan realistis dengan foto asli, dokumentasi Scribe, 34 feature test
 
 ---
 
@@ -248,37 +249,43 @@ admin mengakses semua laporan dan satu-satunya yang bisa mengubah status. Login 
 
 | | |
 |---|---|
-| Dataset | [Garbage Classification (12 classes)](https://www.kaggle.com/datasets/mostafaabla/garbage-classification), lisensi ODbL-1.0 |
-| Mapping | `organic` = biological · `plastic` = plastic · `paper` = paper + cardboard |
-| Data | 1.800 gambar (600 per kelas, duplikat dihapus via hash MD5), split 70/15/15 |
-| Model | MobileNetV2 (ImageNet) + head baru, 2 tahap: head saja, lalu fine-tune 30 layer terakhir |
-| **Akurasi test** | **97,04%** (Keras) · **97,78%** (TFLite, lewat kode API) · macro F1 0,9704 |
+| Dataset | 4 dataset Kaggle: [Garbage Classification (12 classes)](https://www.kaggle.com/datasets/mostafaabla/garbage-classification) (ODbL-1.0), [Garbage Dataset v2](https://www.kaggle.com/datasets/sumn2u/garbage-classification-v2) (MIT), [Recyclable and Household Waste](https://www.kaggle.com/datasets/alistairking/recyclable-and-household-waste-classification) (MIT), [Caltech-101](https://www.kaggle.com/datasets/imbikramsaha/caltech-101) (CC0-1.0) |
+| Mapping | `organic` = sisa makanan/biologis · `paper` = kertas, kardus, koran · `plastic` = botol, kantong, wadah, styrofoam · `other` = kaca, logam, baterai, baju/sepatu, 84 jenis benda sehari-hari |
+| Data | 9.812 gambar (±2.500 per kelas, 3.710 duplikat dihapus via perceptual hash), split 70/15/15 + 488 gambar `unseen` |
+| Model | MobileNetV2 (ImageNet) + head baru, 2 tahap: head saja, lalu fine-tune 60 layer terakhir |
+| **Akurasi test** | **91,32%** (Keras) · **90,23%** (TFLite, lewat kode API) · macro F1 0,9138 |
+| **Benda baru → `other`** | **87,7%** dari 488 gambar 8 jenis benda yang tidak pernah dilihat · gitar **74/75** |
 | Output | `ml/models/waste_classifier.tflite` (2,4 MB, dipakai API), `.keras` (arsip) |
 
 | Kelas | Precision | Recall | F1 |
 |---|---|---|---|
-| organic | 1,0000 | 1,0000 | 1,0000 |
-| paper | 0,9659 | 0,9444 | 0,9551 |
-| plastic | 0,9457 | 0,9667 | 0,9560 |
+| organic | 0,9527 | 0,9253 | 0,9388 |
+| other | 0,8759 | 0,9202 | 0,8975 |
+| paper | 0,9301 | 0,9227 | 0,9264 |
+| plastic | 0,8997 | 0,8853 | 0,8925 |
 
 <p>
   <img src="ml/reports/confusion_matrix.png" alt="Confusion matrix" width="360">
   <img src="ml/reports/training_curves.png" alt="Kurva training" width="520">
 </p>
 
-Semua kesalahan terjadi antara **paper dan plastic** (kemasan plastik dan kertas mengkilap mirip secara visual).
-Pada foto dunia nyata dari sumber berbeda (24 foto Pexels), akurasinya **75%** karena *domain shift*: dataset berisi objek tunggal
-berlatar bersih, sementara laporan berisi tumpukan sampah di lokasi nyata. Prediksi dengan confidence < 0,6 ditandai `uncertain`
-sehingga user diminta memilih kategori sendiri. Detail: [ml/README.md](ml/README.md) dan notebook
-[ml/notebooks/training.ipynb](ml/notebooks/training.ipynb).
+**Kenapa ada kelas `other`?** Model versi 1 (3 kelas, akurasi 97,04% pada foto studio) selalu memaksa jawaban, sehingga
+foto gitar terbaca *"99% kertas"*. Versi 2 belajar mengenali "bukan sampah" dari ribuan contoh benda lain. Hasil `other`
+diubah backend menjadi `label: null, recognized: false`, dan aplikasi menampilkan *"AI tidak mengenali foto ini sebagai sampah"*.
+
+Pada foto dunia nyata dari sumber berbeda (24 foto Pexels), akurasinya **75% (18/24)**, sama dengan versi 1. Dari 24 foto
+itu, 4 foto sampah ikut ditolak sebagai `other` karena objek non-sampah mendominasi foto (tempat sampah besi, pagar besi),
+dan tidak ada benda non-sampah yang lolos sebagai sampah. Prediksi dengan confidence < 0,6 ditandai `uncertain`, dan pada
+kedua kasus user memilih kategori sendiri. Detail: [ml/README.md](ml/README.md), [ml/dataset/README.md](ml/dataset/README.md),
+dan notebook [ml/notebooks/training.ipynb](ml/notebooks/training.ipynb).
 
 ## Alur AI end-to-end
 
 ```
 User memilih foto (web / mobile)
   → POST /api/v1/predict (Laravel)  → POST {ML_URL}/predict (FastAPI + TFLite)
-  ← { label, confidence, uncertain, probabilities }
-  → kategori terisi otomatis, user boleh mengubah (wajib memilih bila AI tidak yakin / layanan AI mati)
+  ← { label, confidence, uncertain, recognized, probabilities }
+  → kategori terisi otomatis, user boleh mengubah (wajib memilih bila AI tidak yakin / foto bukan sampah / layanan AI mati)
 User mengirim laporan
   → POST /api/v1/reports (foto + GPS + deskripsi + category final + ai_label/ai_confidence)
   → backend menyimpan foto (resize + re-encode), category, dan tebakan AI terpisah
@@ -290,12 +297,15 @@ Admin di web mengubah status → riwayat status tercatat → user melihatnya di 
 
 | Bagian | Perintah | Cakupan |
 |---|---|---|
-| Backend | `php artisan test` (DB `swm_test`) | 32 feature test: auth, role, CRUD laporan, policy, status + log, upload, proxy ML, users, dashboard |
+| Backend | `php artisan test` (DB `swm_test`) | 34 feature test: auth, role, CRUD laporan, policy, status + log, upload, proxy ML (termasuk foto bukan sampah), users, dashboard |
 | Web | `bun run test`, `bun run build` | routing + typecheck |
 | Mobile | `flutter analyze`, `flutter test` | parsing model API |
-| ML | `pytest` | API dengan stub model (tanpa file model/TensorFlow) |
+| ML | `python -m pytest`, `python scripts/evaluate_photos.py <folder>` | API dengan stub model (tanpa file model/TensorFlow); uji foto nyata dengan model asli |
 
 ## Kredit
-- Dataset: [Garbage Classification (12 classes)](https://www.kaggle.com/datasets/mostafaabla/garbage-classification) oleh Mostafa Mohamed (ODbL-1.0)
+- Dataset: [Garbage Classification (12 classes)](https://www.kaggle.com/datasets/mostafaabla/garbage-classification) oleh Mostafa Mohamed (ODbL-1.0),
+  [Garbage Dataset v2](https://www.kaggle.com/datasets/sumn2u/garbage-classification-v2) oleh `sumn2u` (MIT),
+  [Recyclable and Household Waste Classification](https://www.kaggle.com/datasets/alistairking/recyclable-and-household-waste-classification) oleh Alistair King (MIT),
+  [Caltech-101](https://www.kaggle.com/datasets/imbikramsaha/caltech-101) (mirror Kaggle oleh `imbikramsaha`, CC0-1.0)
 - Foto seeder: [Pexels](https://www.pexels.com) (Pexels License), daftar fotografer di `backend/database/seeders/photos/manifest.json`
 - Peta: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors

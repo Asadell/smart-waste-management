@@ -88,10 +88,12 @@ export interface Paginated<T> {
 }
 
 export interface PredictionResult {
-  label: WasteCategory;
+  /** null when the photo is not organic/paper/plastic waste (recognized = false). */
+  label: WasteCategory | null;
   confidence: number;
-  probabilities: Record<WasteCategory, number>;
+  probabilities: Partial<Record<WasteCategory | "other", number>>;
   uncertain: boolean;
+  recognized: boolean;
 }
 
 /** Report filters as kept in the URL (/reports?status=...). */

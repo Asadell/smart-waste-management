@@ -100,7 +100,7 @@ export function ReportForm({ report }: { report?: Report }) {
       const res = await predict.mutateAsync(f);
       setAi(res);
       // Prefill the category with the AI guess; when the AI is unsure the user must choose.
-      if (!res.uncertain) setValue("category", res.label, { shouldValidate: true });
+      if (res.label && !res.uncertain) setValue("category", res.label, { shouldValidate: true });
       else setValue("category", undefined as never);
     } catch (e) {
       setAiError(
@@ -175,7 +175,7 @@ export function ReportForm({ report }: { report?: Report }) {
     fd.append("longitude", String(v.longitude));
     if (file) fd.append("photo", file);
     // Send the AI guess only for a newly detected photo. Without it the backend asks the ML service itself.
-    if (file && ai) {
+    if (file && ai?.label) {
       fd.append("ai_label", ai.label);
       fd.append("ai_confidence", String(ai.confidence));
       fd.append("ai_uncertain", ai.uncertain ? "1" : "0");

@@ -36,7 +36,7 @@ paths:
     post:
       summary: 'Prediksi kategori sampah'
       operationId: prediksiKategoriSampah
-      description: "Proxy ke layanan ML. Dipakai untuk preview sebelum laporan dikirim.\nBila `uncertain = true`, client sebaiknya meminta user memilih kategori."
+      description: "Proxy ke layanan ML. Dipakai untuk preview sebelum laporan dikirim.\nBila `uncertain = true`, client sebaiknya meminta user memilih kategori.\nBila `recognized = false` (model menjawab `other`, mis. foto gitar), `label` bernilai null: foto tidak dikenali sebagai sampah organik, kertas, atau plastik."
       parameters: []
       responses:
         200:
@@ -50,9 +50,11 @@ paths:
                     label: plastic
                     confidence: 0.94
                     uncertain: false
+                    recognized: true
                     probabilities:
                       organic: 0.02
-                      paper: 0.04
+                      other: 0.01
+                      paper: 0.03
                       plastic: 0.94
                 properties:
                   data:
@@ -60,22 +62,31 @@ paths:
                     properties:
                       label:
                         type: string
+                        nullable: true
                         example: plastic
+                        description: 'organic | paper | plastic, atau null bila foto tidak dikenali sebagai sampah.'
                       confidence:
                         type: number
                         example: 0.94
                       uncertain:
                         type: boolean
                         example: false
+                      recognized:
+                        type: boolean
+                        example: true
+                        description: 'false bila model menjawab other (bukan sampah organik/kertas/plastik).'
                       probabilities:
                         type: object
                         properties:
                           organic:
                             type: number
                             example: 0.02
+                          other:
+                            type: number
+                            example: 0.01
                           paper:
                             type: number
-                            example: 0.04
+                            example: 0.03
                           plastic:
                             type: number
                             example: 0.94

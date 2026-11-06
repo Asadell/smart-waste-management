@@ -202,7 +202,31 @@ class ReportTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->postJson('/api/v1/predict', ['file' => UploadedFile::fake()->image('a.jpg')])
             ->assertOk()
-            ->assertJsonPath('data.label', 'organic');
+            ->assertJsonPath('data.label', 'organic')
+            ->assertJsonPath('data.recognized', true);
+    }
+
+    public function test_predict_reports_unrecognized_photo_when_model_says_other(): void
+    {
+        Http::fake(['*/predict' => Http::response(['label' => 'other', 'confidence' => 0.95, 'uncertain' => false, 'probabilities' => ['other' => 0.95]])]);
+
+        $this->actingAs(User::factory()->create())
+            ->postJson('/api/v1/predict', ['file' => UploadedFile::fake()->image('guitar.jpg')])
+            ->assertOk()
+            ->assertJsonPath('data.label', null)
+            ->assertJsonPath('data.recognized', false)
+            ->assertJsonPath('data.uncertain', true);
+    }
+
+    public function test_report_with_unrecognized_photo_is_saved_without_ai_label(): void
+    {
+        Http::fake(['*/predict' => Http::response(['label' => 'other', 'confidence' => 0.9, 'uncertain' => false, 'probabilities' => []])]);
+
+        $this->actingAs(User::factory()->create())
+            ->postJson('/api/v1/reports', $this->payload(['ai_label' => null, 'ai_confidence' => null]))
+            ->assertCreated()
+            ->assertJsonPath('data.ai_label', null)
+            ->assertJsonPath('data.ai_uncertain', true);
     }
 
     public function test_predict_returns_503_when_ml_is_down(): void

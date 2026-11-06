@@ -1,11 +1,12 @@
-Test accuracy: 0.9704
+Test accuracy: 0.9132
 
               precision    recall  f1-score   support
 
-     organic     1.0000    1.0000    1.0000        90
-       paper     0.9659    0.9444    0.9551        90
-     plastic     0.9457    0.9667    0.9560        90
+     organic     0.9527    0.9253    0.9388       348
+       other     0.8759    0.9202    0.8975       376
+       paper     0.9301    0.9227    0.9264       375
+     plastic     0.8997    0.8853    0.8925       375
 
-    accuracy                         0.9704       270
-   macro avg     0.9705    0.9704    0.9704       270
-weighted avg     0.9705    0.9704    0.9704       270
+    accuracy                         0.9132      1474
+   macro avg     0.9146    0.9134    0.9138      1474
+weighted avg     0.9139    0.9132    0.9133      1474

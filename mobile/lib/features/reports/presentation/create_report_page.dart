@@ -391,6 +391,14 @@ class _AiPanel extends StatelessWidget {
             Text('AI sedang menganalisis foto...'),
           ]),
         ),
+      PredictState.result when predict.prediction!.label == null => (
+          Icons.image_not_supported_outlined,
+          Colors.orange.shade800,
+          const Text(
+            'AI tidak mengenali foto ini sebagai sampah organik, kertas, atau plastik. '
+            'Pastikan sampahnya terlihat jelas, atau pilih kategori sendiri.',
+          ),
+        ),
       PredictState.result when predict.prediction!.uncertain => (
           Icons.help_outline,
           Colors.orange.shade800,

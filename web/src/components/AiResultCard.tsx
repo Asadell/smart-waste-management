@@ -1,4 +1,4 @@
-import { AlertTriangle, CloudOff, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { AlertTriangle, CloudOff, ImageOff, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LIST, CATEGORY_META } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,22 @@ export function AiResultCard({ loading, result, error, onRetry }: { loading: boo
     );
   }
   if (!result) return null;
+  if (!result.label) {
+    return (
+      <div className="rounded-xl border border-pending/30 bg-pending-soft p-4">
+        <div className="flex items-start gap-3">
+          <ImageOff className="mt-0.5 size-5 shrink-0 text-pending" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-pending">AI tidak mengenali foto ini sebagai sampah</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Foto tidak terlihat seperti sampah organik, kertas, atau plastik. Pastikan sampahnya terlihat jelas di foto, atau pilih kategori secara manual.
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={onRetry}><RefreshCw /> Deteksi ulang</Button>
+        </div>
+      </div>
+    );
+  }
   if (result.uncertain) {
     return (
       <div className="rounded-xl border border-pending/30 bg-pending-soft p-4">

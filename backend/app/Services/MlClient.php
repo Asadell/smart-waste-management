@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\WasteCategory;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\UploadedFile;
@@ -20,7 +21,11 @@ class MlClient
     ) {}
 
     /**
-     * @return array{label: string, confidence: float, uncertain: bool, probabilities: array<string, float>}
+     * The model also knows an "other" class (not organic/paper/plastic, e.g. a guitar).
+     * Such a result is returned as `label = null`, `recognized = false`, so it is never
+     * stored as a waste category.
+     *
+     * @return array{label: ?string, confidence: float, uncertain: bool, recognized: bool, probabilities: array<string, float>}
      *
      * @throws MlUnavailableException
      */
@@ -45,11 +50,13 @@ class MlClient
         }
 
         $data = $response->json();
+        $recognized = in_array($data['label'] ?? null, WasteCategory::values(), true);
 
         return [
-            'label' => (string) $data['label'],
+            'label' => $recognized ? (string) $data['label'] : null,
             'confidence' => (float) $data['confidence'],
-            'uncertain' => (bool) ($data['uncertain'] ?? false),
+            'uncertain' => ! $recognized || (bool) ($data['uncertain'] ?? false),
+            'recognized' => $recognized,
             'probabilities' => $data['probabilities'] ?? [],
         ];
     }
